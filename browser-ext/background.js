@@ -72,25 +72,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     startHealthCheck: () => { startHealthCheck(); sendResponse({ ok: true }); },
     stopHealthCheck: () => { stopHealthCheck(); sendResponse({ ok: true }); },
 
-    validateKey: async () => {
-      try {
-        const res = await fetch(`${MCP_SERVER}/api/auth/validate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            key: message.key,
-            deviceId: message.deviceId || '',
-            email: message.email || '',
-          }),
-          signal: AbortSignal.timeout(10000),
-        });
-        const data = await res.json();
-        sendResponse(data);
-      } catch (err) {
-        sendResponse({ valid: false, reason: 'Server unreachable' });
-      }
-    },
-
     saveCode: async () => {
       try {
         const result = await callTool('write_file', {

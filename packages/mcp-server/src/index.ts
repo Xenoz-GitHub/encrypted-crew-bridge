@@ -11,12 +11,10 @@ import { toolDefinitions } from './tools/index.js';
 import { McpController } from './controllers/mcpController.js';
 import { FileService } from './services/fileService.js';
 import { EncryptionService } from './services/encryptionService.js';
-import { LicenseService } from './services/licenseService.js';
 import { createRouter } from './api/routes.js';
 
 const encryptionService = new EncryptionService();
 const fileService = new FileService(env.WORKSPACE_ROOT, encryptionService);
-const licenseService = new LicenseService(env.WORKSPACE_ROOT);
 const controller = new McpController(fileService, encryptionService);
 
 const mcpServer = new Server(
@@ -41,10 +39,7 @@ async function start(): Promise<void> {
   const app = express();
   app.use(cors());
   app.use(express.json());
-  app.use('/api', createRouter(controller, licenseService));
-  app.get('/admin', (_req, res) => {
-    res.redirect('/api/admin');
-  });
+  app.use('/api', createRouter(controller));
 
   app.listen(env.PORT, () => {
     logInfo('MCP', 'Server started', { port: env.PORT, workspace: env.WORKSPACE_ROOT });

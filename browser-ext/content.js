@@ -5,7 +5,6 @@ const FACEBOOK_URL = 'https://www.facebook.com/Zawn.Loid.SuwaRizz111';
 const FACEBOOK_MESSENGER = 'https://m.me/Zawn.Loid.SuwaRizz111';
 
 let agentState = 'locked';
-let licenseKey = '';
 let processedMessages = new Set();
 let systemPromptSent = false;
 let bridgePanel = null;
@@ -51,15 +50,7 @@ function getDeepSeekEmail() {
   return '';
 }
 
-function saveKeyData(key, deviceId, email) {
-  try {
-    chrome.storage.local.set({
-      ecbLicenseKey: key,
-      ecbDeviceId: deviceId,
-      ecbDsEmail: email || '',
-    });
-  } catch (e) {}
-}
+function saveKeyData(key, deviceId, email) {}
 
 function loadSavedKeyData() {
   return new Promise(function(resolve) {
@@ -73,9 +64,7 @@ function loadSavedKeyData() {
   });
 }
 
-function clearKeyData() {
-  chrome.storage.local.remove(['ecbLicenseKey', 'ecbDeviceId', 'ecbDsEmail', 'ecbCustomPrompt']);
-}
+function clearKeyData() {}
 
 function saveCustomPrompt(text) {
   try { chrome.storage.local.set({ ecbCustomPrompt: text }); } catch (e) {}
@@ -645,127 +634,6 @@ function injectStyles() {
   document.head.appendChild(s);
 }
 
-// ── Startup wizard: step-by-step initialization ───────────────────
-// Steps: validate key → connect MCP server → detect projects → init bridge
-var startupWizard = null;
-var startupSteps = {};
-
-function createStartupWizard() {
-  if (document.querySelector('.ecb-startup-wizard')) return;
-  var logoUrl = 'https://i.ibb.co/v6JLQWHt/ecrew.png';
-  var overlay = document.createElement('div');
-  overlay.className = 'ecb-startup-wizard';
-  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,2,12,0.92);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;animation:ecbFadeIn 0.35s ease';
-
-  var card = document.createElement('div');
-  card.style.cssText = 'background:rgba(10,10,22,0.75);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(0,200,255,0.12);border-radius:20px;padding:40px 36px;max-width:420px;width:90%;text-align:center;box-shadow:0 40px 80px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.04),0 0 60px rgba(0,180,255,0.06);animation:ecbSlideUp 0.4s cubic-bezier(0.16,1,0.3,1);position:relative;overflow:hidden';
-
-  var glow = document.createElement('div');
-  glow.style.cssText = 'position:absolute;top:-60%;left:-60%;width:220%;height:220%;background:radial-gradient(circle at 50% 50%,rgba(0,180,255,0.05) 0%,transparent 50%);pointer-events:none';
-  card.appendChild(glow);
-
-  card.innerHTML += [
-    '<div style="margin-bottom:10px;position:relative">',
-    '<img src="' + logoUrl + '" style="width:48px;height:48px;border-radius:12px;box-shadow:0 0 30px rgba(0,200,255,0.12)">',
-    '</div>',
-    '<h2 style="margin:0 0 2px;font-size:20px;font-weight:700;color:#ececf0;letter-spacing:-0.2px">Initializing Bridge</h2>',
-    '<p style="color:rgba(255,255,255,0.25);font-size:11.5px;margin:0 0 24px">establishing connection & environment</p>',
-    '<div id="ecb-step-list" style="text-align:left;padding:0 4px"></div>',
-    '<div id="ecb-startup-error" style="color:#ff4060;font-size:12px;margin-top:14px;min-height:18px;display:none"></div>',
-  ].join('\n');
-
-  overlay.appendChild(card);
-  document.body.appendChild(overlay);
-  startupWizard = overlay;
-
-  startupSteps = {
-    'key':    { label: 'License validation', status: 'pending', el: null },
-    'mcp':    { label: 'MCP server connection', status: 'pending', el: null },
-    'proj':   { label: 'Project detection', status: 'pending', el: null },
-    'cache':  { label: 'Environment analysis', status: 'pending', el: null },
-    'ready':  { label: 'Bridge initialization', status: 'pending', el: null },
-  };
-  renderStepList();
-
-  // Return reference for async orchestration
-  return overlay;
-}
-
-function renderStepList() {
-  var list = document.getElementById('ecb-step-list');
-  if (!list) return;
-  list.innerHTML = '';
-  Object.keys(startupSteps).forEach(function(key) {
-    var s = startupSteps[key];
-    var el = document.createElement('div');
-    el.style.cssText = 'display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;margin-bottom:2px;transition:all 0.2s';
-    el.innerHTML = '<span class="ecb-step-icon" style="flex:none;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;transition:all 0.3s"></span><span style="flex:1;font-size:12px;color:' + (s.status === 'error' ? '#ff4060' : 'rgba(255,255,255,0.65)') + ';transition:color 0.3s">' + s.label + '</span>';
-    list.appendChild(el);
-    s.el = el;
-    updateStepIcon(key);
-  });
-}
-
-function setStep(key, status, msg) {
-  if (!startupSteps[key]) return;
-  startupSteps[key].status = status;
-  startupSteps[key].msg = msg;
-  if (startupSteps[key].el) updateStepIcon(key);
-  // Error display
-  var errEl = document.getElementById('ecb-startup-error');
-  if (errEl) {
-    if (status === 'error' && msg) {
-      errEl.textContent = msg;
-      errEl.style.display = '';
-    } else if (status !== 'error') {
-      errEl.style.display = 'none';
-    }
-  }
-}
-
-function updateStepIcon(key) {
-  var s = startupSteps[key];
-  if (!s || !s.el) return;
-  var icon = s.el.querySelector('.ecb-step-icon');
-  if (!icon) return;
-  var lbl = s.el.querySelector('span:last-child');
-  switch (s.status) {
-    case 'done':
-      icon.textContent = '\u2713';
-      icon.style.background = 'rgba(0,255,148,0.15)';
-      icon.style.color = '#00ff94';
-      icon.style.boxShadow = '0 0 12px rgba(0,255,148,0.2)';
-      if (lbl) lbl.style.color = 'rgba(255,255,255,0.8)';
-      break;
-    case 'active':
-      icon.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" style="animation:ecbSpin 0.8s linear infinite"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="31.4" stroke-dashoffset="10" stroke-linecap="round"/></svg>';
-      icon.style.background = 'rgba(0,200,255,0.12)';
-      icon.style.color = '#00c8ff';
-      icon.style.boxShadow = '0 0 12px rgba(0,200,255,0.15)';
-      if (lbl) lbl.style.color = '#00c8ff';
-      break;
-    case 'error':
-      icon.textContent = '\u2717';
-      icon.style.background = 'rgba(255,50,50,0.15)';
-      icon.style.color = '#ff4060';
-      icon.style.boxShadow = '0 0 12px rgba(255,50,50,0.2)';
-      if (lbl) lbl.style.color = '#ff4060';
-      break;
-    default: // pending
-      icon.textContent = '\u25CB';
-      icon.style.background = 'rgba(255,255,255,0.04)';
-      icon.style.color = 'rgba(255,255,255,0.2)';
-      icon.style.boxShadow = 'none';
-      if (lbl) lbl.style.color = 'rgba(255,255,255,0.35)';
-  }
-}
-
-function closeStartupWizard() {
-  if (startupWizard && startupWizard.parentNode) startupWizard.remove();
-  startupWizard = null;
-  startupSteps = {};
-}
-
 // ── Enhanced project detection with caching & fallbacks ──────────
 async function detectProject() {
   var cached = null;
@@ -811,112 +679,15 @@ async function detectProject() {
 // ── Main startup orchestration ────────────────────────────────────
 async function startupSequence(key, skipWizard) {
   installSendHooks();
-  if (skipWizard) {
-    // Fast path: key already validated, go straight to bridge
-    licenseKey = key;
-    injectStyles();
-    createBridgePanel();
-    updatePanel('ready');
-    agentState = 'ready';
-    startAgent();
-    return;
-  }
-
-  var overlay = createStartupWizard();
-  if (!document.getElementById('ecb-styles')) injectStyles();
-
-  // Step 1: Validate license key
-  setStep('key', 'active');
-  var deviceId = getDeviceId();
-  var email = getDeepSeekEmail();
-  var keyResult = await validateKeyWithRetry(key, 3, deviceId, email);
-  if (!keyResult.valid) {
-    setStep('key', 'error', keyResult.reason || 'invalid key');
-    closeStartupWizard();
-    createAuthModal();
-    return;
-  }
-  setStep('key', 'done', 'License validated');
-  licenseKey = key;
-  saveKeyData(key, deviceId, email);
-
-  // Step 2: Connect to MCP server
-  setStep('mcp', 'active');
-  var mcpOk = await checkMCPConnection(5);
-  if (!mcpOk) {
-    setStep('mcp', 'error', 'Server unreachable (localhost:3100)');
-    closeStartupWizard();
-    clearKeyData();
-    createAuthModal();
-    return;
-  }
-  setStep('mcp', 'done', 'MCP server reachable');
-
-  // Step 3: Detect projects
-  setStep('proj', 'active');
-  var projResult = await detectProject();
-  if (projResult.success) {
-    setStep('proj', 'done', projResult.cached ? 'Projects loaded (cached)' : 'Projects detected: ' + knownProjects.join(', '));
-  } else if (projResult.fallback) {
-    setStep('proj', 'done', 'Using fallback project');
-  } else {
-    setStep('proj', 'done', 'Using default project');
-  }
-
-  // Step 4: Analyze environment
-  setStep('cache', 'active');
-  await analyzeEnvironment();
-  setStep('cache', 'done', 'Environment ready');
-
-  // Step 5: Initialize bridge
-  setStep('ready', 'active', 'Building interface...');
   injectStyles();
   createBridgePanel();
   updatePanel('ready');
   agentState = 'ready';
-
-  setStep('ready', 'done', 'Ready!');
-
-  // Show launch button
-  overlay.innerHTML += [
-    '<div style="margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.04)">',
-    '<button id="ecbStartBtn2" style="width:100%;background:linear-gradient(135deg,#00c8ff,#00ff94);color:#000;border:none;border-radius:12px;padding:12px;font-size:13px;cursor:pointer;font-weight:700;letter-spacing:0.3px;transition:transform 0.15s,box-shadow 0.25s;box-shadow:0 4px 24px rgba(0,200,255,0.3)">Launch Bridge</button>',
-    '</div>'
-  ].join('\n');
-
-  document.getElementById('ecbStartBtn2').addEventListener('click', function() {
-    closeStartupWizard();
-    startAgent();
-  });
+  startAgent();
 }
 
-function validateKeyWithRetry(key, maxRetries, deviceId, email) {
-  return new Promise(function(resolve) {
-    var attempts = 0;
-    var timedOut = false;
-    var timer = setTimeout(function() { timedOut = true; resolve({ valid: false, reason: 'timeout' }); }, 10000);
-    function tryValidate() {
-      attempts++;
-      chrome.runtime.sendMessage({
-        action: 'validateKey',
-        key: key,
-        deviceId: deviceId || getDeviceId(),
-        email: email || getDeepSeekEmail(),
-      }, function(response) {
-        if (timedOut) return;
-        clearTimeout(timer);
-        if (response && response.valid) {
-          resolve({ valid: true });
-        } else if (response && response.reason === 'Server unreachable' && attempts < maxRetries) {
-          timer = setTimeout(function() { timedOut = true; resolve({ valid: false, reason: 'timeout' }); }, 10000);
-          setTimeout(tryValidate, 2000);
-        } else {
-          resolve({ valid: false, reason: response ? (response.reason || 'invalid key') : 'no response', expired: response && response.expired });
-        }
-      });
-    }
-    tryValidate();
-  });
+function validateKeyWithRetry() {
+  return Promise.resolve({ valid: true });
 }
 
 function checkMCPConnection(maxRetries) {
@@ -958,218 +729,9 @@ async function analyzeEnvironment() {
   } catch(e) {}
 }
 
-// ── Auth UI (Professional Paywall) ─────────────────────────────
+// ── Auth modal (free mode: no-op) ────────────────────────────────
 function createAuthModal() {
-  if (document.querySelector('.ecb-auth-modal')) return;
-  var logoUrl = 'https://i.ibb.co/v6JLQWHt/ecrew.png';
-  var detectedEmail = getDeepSeekEmail();
-
-  const overlay = document.createElement('div');
-  overlay.className = 'ecb-auth-modal';
-  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,2,12,0.92);z-index:2147483647;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;animation:ecbFadeIn 0.35s ease';
-
-  const card = document.createElement('div');
-  card.style.cssText = 'background:rgba(10,10,22,0.75);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(0,200,255,0.12);border-radius:20px;padding:36px 32px;max-width:400px;width:92%;text-align:center;box-shadow:0 40px 80px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.04),0 0 60px rgba(0,180,255,0.06);animation:ecbSlideUp 0.4s cubic-bezier(0.16,1,0.3,1);position:relative;overflow:hidden';
-
-  const glow = document.createElement('div');
-  glow.style.cssText = 'position:absolute;top:-60%;left:-60%;width:220%;height:220%;background:radial-gradient(circle at 50% 50%,rgba(0,180,255,0.05) 0%,transparent 50%);pointer-events:none';
-  card.appendChild(glow);
-
-  // Build inner HTML with SVG icons (no emojis)
-  var fbSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="#1877f2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>';
-  var discordSvg = '<svg width="14" height="14" viewBox="0 0 127.14 96.36" fill="#5865f2"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36a77.7,77.7,0,0,0,6.89-11.11,68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/></svg>';
-  var keySvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.85 12.15L19 4"/><path d="M18 5l2 2"/><path d="M15 8l2 2"/></svg>';
-  var checkSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00ff94" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
-  var lockSvg = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
-  var mailSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>';
-
-  card.innerHTML += [
-    '<div style="margin-bottom:10px;position:relative">',
-    '<img src="' + logoUrl + '" style="width:48px;height:48px;border-radius:12px;box-shadow:0 0 30px rgba(0,200,255,0.12)">',
-    '</div>',
-    '<h2 style="margin:0 0 2px;font-size:20px;font-weight:700;color:#ececf0;letter-spacing:-0.2px">Crew Bridge</h2>',
-    '<p style="color:rgba(255,255,255,0.25);font-size:11.5px;margin:0 0 18px;letter-spacing:0.2px">AI File Bridge for DeepSeek Chat</p>',
-
-    // Pricing card
-    '<div style="background:linear-gradient(135deg,rgba(0,200,255,0.06),rgba(0,255,148,0.04));border:1px solid rgba(0,200,255,0.12);border-radius:12px;padding:14px;margin-bottom:16px">',
-    '<div style="display:flex;align-items:baseline;justify-content:center;gap:2px">',
-    '<span style="font-size:24px;font-weight:800;color:#ececf0;letter-spacing:-0.5px">\u20B1</span>',
-    '<span style="font-size:32px;font-weight:800;color:#ececf0;letter-spacing:-1px">100</span>',
-    '<span style="font-size:12px;font-weight:400;color:rgba(255,255,255,0.3);margin-left:2px">/ month</span>',
-    '</div>',
-    '<div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-top:10px">',
-    '<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:rgba(255,255,255,0.45)">' + checkSvg + ' All features</span>',
-    '<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:rgba(255,255,255,0.45)">' + checkSvg + ' Lifetime access</span>',
-    '<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:rgba(255,255,255,0.45)">' + checkSvg + ' Device-bound</span>',
-    '</div></div>',
-
-    // Get Key section
-    '<div id="ecbGetKeySection" style="margin-bottom:14px">',
-    '<button id="ecbGetKeyBtn" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;background:linear-gradient(135deg,#0066ff,#00c8ff);color:#fff;border:none;border-radius:12px;padding:13px;font-size:13px;cursor:pointer;font-weight:700;letter-spacing:0.3px;transition:transform 0.15s,box-shadow 0.25s;box-shadow:0 4px 20px rgba(0,150,255,0.3)">' + keySvg + ' Get Your License Key</button>',
-    '<div style="display:none;gap:8px;margin-top:8px">',
-    '<button id="ecbFbBtn" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:1;background:rgba(24,119,242,0.1);color:#8ab4f8;border:1px solid rgba(24,119,242,0.18);border-radius:8px;padding:8px;font-size:11px;cursor:pointer;font-weight:600;transition:all 0.15s">' + fbSvg + ' Facebook</button>',
-    '<button id="ecbDiscordBtn" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:1;background:rgba(88,101,242,0.1);color:#818cf8;border:1px solid rgba(88,101,242,0.18);border-radius:8px;padding:8px;font-size:11px;cursor:pointer;font-weight:600;transition:all 0.15s">' + discordSvg + ' Discord</button>',
-    '</div>',
-    '<p style="color:rgba(255,255,255,0.2);font-size:10px;margin:6px 0 0;letter-spacing:0.2px">Or contact us for a free 5-hour trial key</p>',
-    '</div>',
-
-    // Divider
-    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">',
-    '<div style="flex:1;height:1px;background:rgba(255,255,255,0.06)"></div>',
-    '<span style="color:rgba(255,255,255,0.12);font-size:10px;letter-spacing:0.8px;text-transform:uppercase;font-weight:500">Already have a key?</span>',
-    '<div style="flex:1;height:1px;background:rgba(255,255,255,0.06)"></div>',
-    '</div>',
-
-    // Key input section
-    '<div style="position:relative;margin-bottom:10px">',
-    (detectedEmail ? '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:6px 10px;background:rgba(0,200,255,0.04);border:1px solid rgba(0,200,255,0.06);border-radius:8px;font-size:10.5px;color:rgba(255,255,255,0.25);text-align:left">' + mailSvg + ' <span style="color:rgba(255,255,255,0.2)">Detected account:</span> <span style="color:rgba(0,200,255,0.5)">' + detectedEmail + '</span></div>' : '') +
-    '<input id="ecbKeyInput" type="text" placeholder="License key" autocomplete="off" spellcheck="false"',
-    ' style="width:100%;box-sizing:border-box;background:rgba(0,0,0,0.4);border:1.5px solid rgba(0,200,255,0.10);border-radius:10px;padding:12px 14px;color:#e0e0e8;font-size:13px;font-family:inherit;outline:none;transition:border-color 0.2s,box-shadow 0.2s;text-align:center;letter-spacing:1.5px;caret-color:#00c8ff">',
-    '</div>',
-    '<button id="ecbAuthBtn"',
-    ' style="width:100%;box-sizing:border-box;background:rgba(0,200,255,0.08);color:#00c8ff;border:1px solid rgba(0,200,255,0.15);border-radius:10px;padding:12px;font-size:12px;cursor:pointer;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;transition:all 0.2s">Activate Bridge</button>',
-    '<div id="ecbAuthError" style="color:#ff4060;font-size:11px;margin-top:10px;min-height:16px"></div>',
-    '<div id="ecbStartSection" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.04)">',
-    '<div style="display:flex;align-items:center;justify-content:center;gap:6px;color:rgba(255,255,255,0.35);font-size:11px;margin-bottom:12px">' + checkSvg + ' Key validated &mdash; ready to launch</div>',
-    '<button id="ecbStartBtn"',
-    ' style="width:100%;background:linear-gradient(135deg,#00c8ff,#00ff94);color:#000;border:none;border-radius:10px;padding:12px;font-size:13px;cursor:pointer;font-weight:700;letter-spacing:0.4px;transition:transform 0.15s,box-shadow 0.25s;box-shadow:0 4px 24px rgba(0,200,255,0.3)">Launch Bridge</button>',
-    '</div>',
-
-    // Custom Instructions
-    '<div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.03)">',
-    '<div style="display:flex;align-items:center;justify-content:center;gap:6px;color:rgba(255,255,255,0.2);font-size:10.5px;letter-spacing:0.4px;margin-bottom:6px">Custom Instructions</div>',
-    '<textarea id="ecbCustomInput" placeholder="Describe how the AI should behave, coding style preferences, project conventions, or any specific instructions you want applied on every startup."',
-    ' style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(0,200,255,0.08);border-radius:8px;padding:10px;color:rgba(255,255,255,0.55);font-size:11px;font-family:inherit;outline:none;resize:vertical;min-height:50px;max-height:120px;transition:border-color 0.2s;line-height:1.5"></textarea>',
-    '</div>',
-
-    // Footer
-    '<div style="margin-top:14px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.02)">',
-    '<div style="display:flex;justify-content:center;gap:16px;font-size:9.5px;color:rgba(255,255,255,0.1);letter-spacing:0.3px">',
-    '<span style="display:flex;align-items:center;gap:4px">' + lockSvg + ' Device-bound</span>',
-    '<span style="display:flex;align-items:center;gap:4px">' + lockSvg + ' Saved locally</span>',
-    '<span id="ecbAuthNewSession" style="display:flex;align-items:center;gap:4px;cursor:pointer;color:rgba(0,200,255,0.35);transition:color 0.2s" title="Start a new chat session">&#65291; New Session</span>',
-    '</div></div>',
-  ].join('\n');
-
-  overlay.appendChild(card);
-  document.body.appendChild(overlay);
-
-  // ── References ──
-  var input = document.getElementById('ecbKeyInput');
-  var btn = document.getElementById('ecbAuthBtn');
-  var err = document.getElementById('ecbAuthError');
-  var startSection = document.getElementById('ecbStartSection');
-  var startBtn = document.getElementById('ecbStartBtn');
-  var getKeyBtn = document.getElementById('ecbGetKeyBtn');
-  var fbBtn = document.getElementById('ecbFbBtn');
-  var discordBtn = document.getElementById('ecbDiscordBtn');
-  var customInput = document.getElementById('ecbCustomInput');
-
-  // ── Social buttons ──
-  getKeyBtn.addEventListener('click', function() {
-    // Show submenu with Facebook/Discord
-    getKeyBtn.style.display = 'none';
-    fbBtn.parentElement.style.display = 'flex'; // show social row
-    fbBtn.parentElement.style.animation = 'ecbFadeIn 0.2s ease';
-  });
-
-  fbBtn.addEventListener('click', openFacebook);
-  discordBtn.addEventListener('click', openDiscord);
-
-  // ── Load saved custom prompt ──
-  loadCustomPrompt().then(function(t) { if (t) customInput.value = t; }).catch(function(){});
-
-  // ── New Session ──
-  var authNewSession = document.getElementById('ecbAuthNewSession');
-  if (authNewSession) {
-    authNewSession.addEventListener('click', function(e) {
-      e.stopPropagation();
-      window.location.href = 'https://chat.deepseek.com/';
-    });
-    authNewSession.addEventListener('mouseenter', function() { this.style.color = 'rgba(0,200,255,0.7)'; });
-    authNewSession.addEventListener('mouseleave', function() { this.style.color = 'rgba(0,200,255,0.35)'; });
-  }
-
-  // ── Hover effects ──
-  function addHover(el, shadowColor) {
-    el.addEventListener('mouseenter', function() {
-      el.style.transform = 'translateY(-1px) scale(1.01)';
-      el.style.boxShadow = '0 6px 24px ' + shadowColor;
-    });
-    el.addEventListener('mouseleave', function() {
-      el.style.transform = 'none';
-      el.style.boxShadow = getKeyBtn.contains(el) ? '0 4px 20px rgba(0,150,255,0.3)' : 'none';
-    });
-  }
-  addHover(getKeyBtn, 'rgba(0,150,255,0.35)');
-  addHover(startBtn, 'rgba(0,200,255,0.35)');
-
-  // ── Input focus ──
-  input.addEventListener('focus', function() {
-    input.style.borderColor = '#00c8ff';
-    input.style.boxShadow = '0 0 0 3px rgba(0,200,255,0.10), 0 0 20px rgba(0,200,255,0.03)';
-  });
-  input.addEventListener('blur', function() {
-    input.style.borderColor = 'rgba(0,200,255,0.10)';
-    input.style.boxShadow = 'none';
-  });
-
-  // ── Auth ──
-  function doAuth() {
-    var key = input.value.trim();
-    if (!key) { err.textContent = 'Enter your license key'; return; }
-    var deviceId = getDeviceId();
-    var email = detectedEmail || getDeepSeekEmail();
-
-    btn.textContent = 'Validating...';
-    btn.disabled = true;
-    btn.style.opacity = '0.5';
-    btn.style.transform = 'scale(0.97)';
-
-    chrome.runtime.sendMessage({
-      action: 'validateKey',
-      key: key,
-      deviceId: deviceId,
-      email: email,
-    }, function(response) {
-      btn.textContent = 'Activate Bridge';
-      btn.disabled = false;
-      btn.style.opacity = '1';
-      btn.style.transform = 'none';
-
-      if (response && response.valid) {
-        licenseKey = key;
-        saveKeyData(key, deviceId, email);
-        saveCustomPrompt(customInput.value.trim());
-        err.style.color = '#00ff94';
-        err.textContent = 'Activated';
-        startSection.style.display = 'block';
-        startSection.style.animation = 'ecbSlideUp 0.3s cubic-bezier(0.16,1,0.3,1)';
-        btn.style.display = 'none';
-        input.style.display = 'none';
-        getKeyBtn.style.display = 'none';
-        var socialRow = fbBtn.parentElement;
-        if (socialRow) socialRow.style.display = 'none';
-      } else if (response && response.expired) {
-        err.textContent = 'Key expired — contact Facebook/Discord for renewal';
-        err.style.color = '#f59e0b';
-      } else if (response && response.reason === 'Key already in use on another device') {
-        err.textContent = 'This key is already activated on another device';
-      } else {
-        err.textContent = response && response.reason ? response.reason : 'Invalid key';
-      }
-    });
-  }
-
-  btn.addEventListener('click', doAuth);
-  input.addEventListener('keydown', function(e) { if (e.key === 'Enter') doAuth(); });
-  startBtn.addEventListener('click', function() {
-    saveCustomPrompt(customInput.value.trim());
-    overlay.remove();
-    startupSequence(licenseKey, true);
-  });
-
-  setTimeout(function() { input.focus(); }, 200);
+  return;
 }
 
 // ── ZeroScript-style Bar (anchored above composer) ──────────────
@@ -2616,33 +2178,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 chrome.storage.local.get(['ecbLicenseKey', 'ecbDeviceId'], function(result) {
-  if (result.ecbLicenseKey && result.ecbDeviceId) {
-    licenseKey = result.ecbLicenseKey;
-    console.log('[ECB] Found saved key, auto-validating...');
-    // Auto-validate with device binding — skip wizard if valid
-    var deviceId = result.ecbDeviceId;
-    var email = getDeepSeekEmail();
-    chrome.runtime.sendMessage({
-      action: 'validateKey',
-      key: result.ecbLicenseKey,
-      deviceId: deviceId,
-      email: email,
-    }, function(response) {
-      if (response && response.valid) {
-        console.log('[ECB] Key still valid, skipping auth');
-        saveKeyData(result.ecbLicenseKey, deviceId, email);
-        startupSequence(result.ecbLicenseKey, true); // skipWizard
-      } else if (response && response.expired) {
-        console.log('[ECB] Key expired, showing renewal');
-        createAuthModal();
-      } else {
-        console.log('[ECB] Key invalid, showing paywall');
-        clearKeyData();
-        createAuthModal();
-      }
-    });
-  } else {
-    console.log('[ECB] No saved key, showing paywall');
-    createAuthModal();
-  }
+  // Free mode: skip key validation entirely
+  console.log('[ECB] Starting bridge (free mode)...');
+  startupSequence('', true);
 });
