@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Crew Bridge Admin</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0f0f1a; color:#e0e0e0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; padding:24px; }
+.header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+.header-left { display:flex; align-items:center; gap:12px; }
+.header-left h1 { color:#10a37f; font-size:22px; font-weight:700; }
+.subtitle { color:#6b7280; font-size:13px; }
+.discord-btn { display:inline-flex; align-items:center; gap:8px; background:#5865F2; color:#fff; text-decoration:none; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:500; transition:background 0.2s; }
+.discord-btn:hover { background:#4752C4; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-bottom:24px; }
+.card { background:#1a1a2e; border:1px solid #2a2a4a; border-radius:10px; padding:18px; }
+.card h3 { color:#10a37f; font-size:11px; font-weight:600; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px; }
+.card .value { font-size:24px; font-weight:700; }
+.card .label { font-size:11px; color:#6b7280; margin-top:2px; }
+.card .sub { font-size:11px; color:#6b7280; margin-top:4px; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th, td { text-align:left; padding:8px 10px; border-bottom:1px solid #2a2a4a; }
+th { color:#6b7280; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; }
+tr:hover td { background:#1a1a2e; }
+.log-error { color:#ef4444; }
+.log-warn { color:#f59e0b; }
+.tag { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:500; }
+.tag-active { background:#064e3b; color:#6ee7b7; }
+.tag-used { background:#1e3a5f; color:#93c5fd; }
+.tag-revoked { background:#450a0a; color:#fca5a5; }
+.tag-expired { background:#1e3a2e; color:#f59e0b; }
+input, select, textarea { background:#0f172a; border:1px solid #2a2a4a; border-radius:6px; padding:8px 12px; color:#e0e0e0; font-size:13px; outline:none; transition:border-color 0.2s; }
+input:focus, select:focus, textarea:focus { border-color:#10a37f; }
+textarea { resize:vertical; font-family:inherit; }
+button { border:none; border-radius:6px; padding:8px 16px; cursor:pointer; font-size:13px; font-weight:500; transition:all 0.2s; }
+.btn-primary { background:#10a37f; color:#fff; }
+.btn-primary:hover { background:#059669; }
+.btn-danger { background:#dc2626; color:#fff; }
+.btn-danger:hover { background:#b91c1c; }
+.btn-sm { padding:5px 10px; font-size:11px; }
+.btn-ghost { background:transparent; color:#6b7280; padding:4px 8px; font-size:11px; }
+.btn-ghost:hover { color:#e0e0e0; background:rgba(255,255,255,0.05); }
+.refresh-btn { background:#10a37f; color:#fff; border:none; border-radius:6px; padding:6px 14px; cursor:pointer; font-size:12px; font-weight:500; }
+.refresh-btn:hover { background:#059669; }
+.footer { margin-top:32px; padding-top:16px; border-top:1px solid #2a2a4a; font-size:12px; color:#6b7280; text-align:center; display:flex; justify-content:center; align-items:center; gap:16px; flex-wrap:wrap; }
+.login-box { max-width:380px; margin:80px auto; background:#1a1a2e; border:1px solid #2a2a4a; border-radius:12px; padding:32px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+.login-box h2 { margin-bottom:4px; font-size:20px; color:#f0f0f0; }
+.login-box p { color:#6b7280; font-size:13px; margin-bottom:20px; }
+.login-box input { width:100%; margin-bottom:12px; padding:12px; font-size:14px; }
+.login-box button { width:100%; padding:12px; font-size:14px; }
+.hidden { display:none; }
+.copied { color:#10a37f; font-size:12px; margin-left:8px; }
+.section-title { font-size:16px; font-weight:600; margin:0 0 12px; color:#f0f0f0; }
+.key-bar { display:flex; gap:8px; margin-bottom:12px; align-items:center; flex-wrap:wrap; }
+.search-bar { display:flex; gap:8px; margin-bottom:12px; align-items:center; flex-wrap:wrap; }
+.filter-select { min-width:100px; }
+
+/* Modal */
+.modal-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1000; display:flex; align-items:center; justify-content:center; }
+.modal { background:#1a1a2e; border:1px solid #2a2a4a; border-radius:12px; padding:24px; max-width:640px; width:90%; max-height:80vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
+.modal h2 { color:#f0f0f0; font-size:16px; margin-bottom:12px; }
+.modal-close { float:right; background:none; border:none; color:#6b7280; font-size:20px; cursor:pointer; padding:0; line-height:1; }
+.modal-close:hover { color:#fff; }
+.modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
+.modal-field { margin-bottom:12px; }
+.modal-field label { display:block; font-size:11px; color:#6b7280; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.4px; }
+.modal-field input, .modal-field textarea, .modal-field select { width:100%; }
+
+/* Timeline */
+.timeline { position:relative; padding-left:20px; }
+.timeline::before { content:''; position:absolute; left:6px; top:0; bottom:0; width:2px; background:#2a2a4a; }
+.timeline-item { position:relative; padding:6px 0 6px 16px; font-size:12px; }
+.timeline-item::before { content:''; position:absolute; left:-14px; top:10px; width:8px; height:8px; border-radius:50%; }
+.timeline-item.t-validate::before { background:#6366f1; }
+.timeline-item.t-revoke::before { background:#ef4444; }
+.timeline-item.t-note::before { background:#f59e0b; }
+.timeline-item.t-restriction::before { background:#10a37f; }
+.timeline-time { color:#6b7280; font-size:10px; }
+.timeline-detail { color:#d0d0e0; }
+.timeline-meta { color:#6b7280; font-size:10px; }
+
+/* Top keys list */
+.top-keys { display:flex; flex-direction:column; gap:4px; }
+.top-key-row { display:flex; justify-content:space-between; font-size:11px; padding:3px 0; border-bottom:1px solid #1a1a2e; }
+.top-key-row .key { color:#93c5fd; font-family:monospace; }
+.top-key-row .count { color:#6ee7b7; }
+
+/* Recent activity */
+.recent-list { display:flex; flex-direction:column; gap:3px; max-height:200px; overflow-y:auto; }
+.recent-item { font-size:11px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.03); display:flex; gap:8px; }
+.recent-item .ev-time { color:#6b7280; flex:none; white-space:nowrap; }
+.recent-item .ev-key { color:#93c5fd; font-family:monospace; flex:none; cursor:pointer; }
+.recent-item .ev-key:hover { text-decoration:underline; }
+.recent-item .ev-detail { color:#d0d0e0; overflow:visible; white-space:normal; }
+</style>
+</head>
+<body>
+<div id="loginBox" class="login-box">
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#10a37f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+  </svg>
+  <h2>Admin Login</h2>
+  <p>Enter your administrator password</p>
+  <input type="password" id="adminPass" placeholder="Password">
+  <button class="btn-primary" onclick="login()">Login</button>
+  <div id="loginError" style="color:#ef4444;font-size:12px;margin-top:10px;min-height:18px"></div>
+</div>
+<div id="dashboard" class="hidden">
+  <div class="header">
+    <div class="header-left">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#10a37f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      <div>
+        <h1>Crew Bridge</h1>
+        <div class="subtitle">Admin Dashboard &mdash; Built by XenozExe</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn-primary btn-sm" onclick="exportCsv()">Export CSV</button>
+      <button class="refresh-btn" onclick="refreshAll()">Refresh All</button>
+      <a class="discord-btn" href="https://discord.gg/f5bSTzZtE6" target="_blank" rel="noopener noreferrer" style="padding:6px 14px;font-size:12px">
+        <svg width="16" height="12" viewBox="0 0 127.14 96.36" fill="currentColor"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/></svg>
+        Discord
+      </a>
+    </div>
+  </div>
+
+  <div class="cards" id="cards">
+    <div class="card"><h3>Status</h3><div class="value" id="status">--</div></div>
+    <div class="card"><h3>Uptime</h3><div class="value" id="uptime">--</div></div>
+    <div class="card"><h3>Port</h3><div class="value" id="port">--</div></div>
+    <div class="card"><h3>Projects</h3><div class="value" id="projects">--</div><div class="label">total directories</div></div>
+    <div class="card"><h3>License Keys</h3><div class="value" id="keyCount">--</div><div class="label" id="keyBreakdown"></div></div>
+    <div class="card"><h3>Sessions</h3><div class="value" id="sessionCount">--</div><div class="label">total validations</div></div>
+  </div>
+
+  <div class="cards" id="statsCards" style="margin-top:0">
+    <div class="card" style="grid-column:span 2">
+      <h3>Top Keys by Activity</h3>
+      <div id="topKeys" class="top-keys"><span class="label">Loading...</span></div>
+    </div>
+    <div class="card" style="grid-column:span 2">
+      <h3>Recent Activity</h3>
+      <div id="recentActivity" class="recent-list"><span class="label">Loading...</span></div>
+    </div>
+  </div>
+
+  <h2 class="section-title">License Key Manager</h2>
+  <div class="search-bar">
+    <input id="searchInput" type="text" placeholder="Search keys, email, device, notes..." style="flex:1;min-width:180px" oninput="debounceSearch()">
+    <select id="filterStatus" class="filter-select" onchange="fetchKeys()">
+      <option value="">All Status</option>
+      <option value="active">Active</option>
+      <option value="used">Used</option>
+      <option value="revoked">Revoked</option>
+      <option value="expired">Expired</option>
+    </select>
+    <select id="filterType" class="filter-select" onchange="fetchKeys()">
+      <option value="">All Types</option>
+      <option value="lifetime">Lifetime</option>
+      <option value="onetime">One-Time</option>
+      <option value="trial">Trial</option>
+    </select>
+  </div>
+  <div class="key-bar">
+    <select id="keyType" style="width:auto" onchange="toggleTrialHours()">
+      <option value="lifetime">Lifetime</option>
+      <option value="onetime">One-Time</option>
+      <option value="trial">Trial</option>
+    </select>
+    <input id="trialHours" type="number" value="5" min="1" max="168" style="width:60px;display:none">
+    <span id="trialHoursLabel" style="display:none;color:#6b7280;font-size:12px">hours</span>
+    <button class="btn-primary" onclick="generateKey()">Generate Random</button>
+    <span style="color:#4b5563;font-size:12px">or</span>
+    <input id="customKeyInput" type="text" placeholder="Custom key (e.g. MYKEY-2024-XENOZ)" style="flex:1;min-width:180px">
+    <button class="btn-primary" onclick="createCustomKey()" style="background:#7c3aed">Create Custom</button>
+    <span id="newKeyDisplay" style="font-size:13px;color:#10a37f;align-self:center"></span>
+  </div>
+
+  <table><thead><tr>
+    <th>Key</th><th>Type</th><th>Status</th><th>Sessions</th><th>Expires</th><th>Device</th><th>Email</th><th>Notes</th><th>Actions</th>
+  </tr></thead><tbody id="keyTable"></tbody></table>
+
+  <h2 class="section-title" style="margin-top:24px">Recent Logs <button class="refresh-btn" onclick="fetchLogs()">Refresh</button></h2>
+  <table><thead><tr><th>Time</th><th>Level</th><th>Subsystem</th><th>Message</th></tr></thead><tbody id="logs"></tbody></table>
+
+  <div class="footer">
+    <span>Built by XenozExe &mdash; Encrypted Crew Bridge v1.0.0</span>
+    <a class="discord-btn" href="https://discord.gg/f5bSTzZtE6" target="_blank" rel="noopener noreferrer" style="padding:6px 14px;font-size:12px">
+      <svg width="16" height="12" viewBox="0 0 127.14 96.36" fill="currentColor"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/></svg>
+      Discord
+    </a>
+  </div>
+</div>
+
+<!-- Modal container -->
+<div id="modalContainer"></div>
+
+<script>
+var token = '';
+var searchTimer = null;
+
+function login() {
+  var pass = document.getElementById('adminPass').value;
+  fetch('/api/admin/keys?admin=' + encodeURIComponent(pass)).then(function(r) {
+    if (r.ok) {
+      token = pass;
+      document.getElementById('loginBox').classList.add('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+      init();
+    } else {
+      document.getElementById('loginError').textContent = 'Wrong password';
+    }
+  }).catch(function() {
+    document.getElementById('loginError').textContent = 'Server unreachable';
+  });
+}
+
+function authUrl(path) {
+  return path + (path.indexOf('?') !== -1 ? '&' : '?') + 'admin=' + encodeURIComponent(token);
+}
+
+function closeModal() {
+  document.getElementById('modalContainer').innerHTML = '';
+}
+
+function init() {
+  fetchHealth();
+  fetchProjects();
+  fetchKeys();
+  fetchLogs();
+  fetchStats();
+  setInterval(function() {
+    fetchHealth();
+    fetchProjects();
+    fetchKeys();
+    fetchLogs();
+    fetchStats();
+  }, 30000);
+}
+
+function refreshAll() {
+  fetchHealth();
+  fetchProjects();
+  fetchKeys();
+  fetchLogs();
+  fetchStats();
+}
+
+function debounceSearch() {
+  if (searchTimer) clearTimeout(searchTimer);
+  searchTimer = setTimeout(fetchKeys, 300);
+}
+
+function fetchHealth() {
+  fetch('/api/health').then(function(r) { return r.json(); }).then(function(d) {
+    document.getElementById('status').textContent = d.status;
+    var up = Math.floor(d.uptime);
+    var h = Math.floor(up / 3600);
+    var m = Math.floor((up % 3600) / 60);
+    var s = up % 60;
+    document.getElementById('uptime').textContent = h + 'h ' + m + 'm ' + s + 's';
+    document.getElementById('port').textContent = window.location.port || '3100';
+  });
+}
+
+function fetchProjects() {
+  fetch('/api/tools/list_projects', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}'
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    var text = d.content && d.content[0] ? d.content[0].text : '[]';
+    var p = JSON.parse(text);
+    document.getElementById('projects').textContent = p.length;
+  });
+}
+
+function fetchStats() {
+  fetch(authUrl('/api/admin/stats')).then(function(r) { return r.ok ? r.json() : null; }).then(function(s) {
+    if (!s) return;
+    document.getElementById('keyCount').textContent = s.total;
+    document.getElementById('sessionCount').textContent = s.totalSessions;
+    document.getElementById('keyBreakdown').textContent = s.active + ' active, ' + s.used + ' used, ' + s.revoked + ' revoked, ' + s.expired + ' expired';
+
+    var topHtml = '';
+    for (var i = 0; i < s.topKeys.length && i < 8; i++) {
+      var tk = s.topKeys[i];
+      topHtml += '<div class="top-key-row"><span class="key">' + tk.key + '</span><span class="count">' + tk.sessions + ' sessions</span></div>';
+    }
+    document.getElementById('topKeys').innerHTML = topHtml || '<span class="label">No activity yet</span>';
+
+    var recentHtml = '';
+    for (var i = 0; i < s.recentActivity.length && i < 15; i++) {
+      var ra = s.recentActivity[i];
+      recentHtml += '<div class="recent-item"><span class="ev-time">' + new Date(ra.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) + '</span><span class="ev-key" onclick="copyText(\'' + ra.key.replace(/'/g,"\\'") + '\')" title="Click to copy">' + ra.key + '</span><span class="ev-detail">' + (ra.email ? ra.email + ' - ' : '') + ra.event + '</span></div>';
+    }
+    document.getElementById('recentActivity').innerHTML = recentHtml || '<span class="label">No recent activity</span>';
+  });
+}
+
+function toggleTrialHours() {
+  var isTrial = document.getElementById('keyType').value === 'trial';
+  document.getElementById('trialHours').style.display = isTrial ? '' : 'none';
+  document.getElementById('trialHoursLabel').style.display = isTrial ? '' : 'none';
+}
+
+function fetchKeys() {
+  var query = document.getElementById('searchInput').value.trim();
+  var status = document.getElementById('filterStatus').value;
+  var type = document.getElementById('filterType').value;
+  var url = authUrl('/api/admin/keys/search');
+  if (query) url += '&q=' + encodeURIComponent(query);
+  if (status) url += '&status=' + status;
+  if (type) url += '&type=' + type;
+
+  fetch(url).then(function(r) {
+    if (!r.ok) return;
+    return r.json();
+  }).then(function(keys) {
+    if (!keys) return;
+    document.getElementById('keyCount').textContent = keys.length;
+    var html = '';
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      var typeLabel = ({ lifetime:'Lifetime', onetime:'One-Time', trial:'Trial' })[k.type] || k.type;
+      var expiresDisplay = k.expiresAt ? new Date(k.expiresAt).toLocaleDateString() + ' ' + new Date(k.expiresAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '-';
+      var deviceDisplay = k.deviceId ? k.deviceId.slice(0, 12) + '...' : '-';
+      var emailDisplay = k.dsEmail || '-';
+      var notesDisplay = k.notes ? k.notes.slice(0, 24) + (k.notes.length > 24 ? '..' : '') : '-';
+      html += '<tr>' +
+        '<td style="font-family:monospace;font-size:12px">' + k.key +
+          ' <button class="btn-sm" style="background:#374151;color:#fff;font-size:10px;padding:2px 6px" onclick="event.stopPropagation();copyText(\'' + k.key.replace(/'/g,"\\'") + '\')">Copy</button></td>' +
+        '<td>' + typeLabel + '</td>' +
+        '<td><span class="tag tag-' + k.status + '">' + k.status + '</span></td>' +
+        '<td>' + (k.sessionCount || 0) + '</td>' +
+        '<td style="font-size:11px;color:#6b7280">' + expiresDisplay + '</td>' +
+        '<td style="font-size:11px" title="' + (k.deviceId || '') + '">' + deviceDisplay + '</td>' +
+        '<td style="font-size:11px;word-break:break-all">' + emailDisplay + '</td>' +
+        '<td style="font-size:11px">' +
+          '<button class="btn-ghost" onclick="showNotes(\'' + k.id + '\',\'' + (k.notes || '').replace(/'/g,"\\'") + '\')">' +
+          (k.notes ? '&#9998;' : '&#43;') + '</button>' +
+          '<span style="color:#6b7280">' + notesDisplay + '</span>' +
+        '</td>' +
+        '<td style="white-space:nowrap">' +
+          '<button class="btn-sm" style="background:#374151;color:#fff;margin-right:4px" onclick="showTimeline(\'' + k.id + '\')">Timeline</button>' +
+          (k.status === 'active' || k.status === 'used' ?
+            '<button class="btn-sm btn-danger" onclick="showRevokeDialog(\'' + k.id + '\')">Revoke</button>' : '') +
+          '<button class="btn-ghost" onclick="showRestrictions(\'' + k.id + '\',' +
+            JSON.stringify(k.ipWhitelist || []) + ',' +
+            JSON.stringify(k.ipBlacklist || []) + ')">&#9881;</button>' +
+        '</td>' +
+        '</tr>';
+    }
+    document.getElementById('keyTable').innerHTML = html;
+  });
+}
+
+function generateKey() {
+  var type = document.getElementById('keyType').value;
+  var hours = type === 'trial' ? parseInt(document.getElementById('trialHours').value, 10) || 5 : undefined;
+  fetch(authUrl('/api/admin/keys/generate'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: type, hours: hours })
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    document.getElementById('newKeyDisplay').innerHTML =
+      '<span style="color:#10a37f">Created:</span> <strong>' + d.key + '</strong>' +
+      (d.expiresAt ? ' <span style="color:#6b7280;font-size:11px">expires ' + new Date(d.expiresAt).toLocaleString() + '</span>' : '') +
+      ' <button class="btn-sm" style="background:#374151;color:#fff" onclick="copyKey(\'' + d.key + '\')">Copy</button>';
+    fetchKeys(); fetchStats();
+  });
+}
+
+function createCustomKey() {
+  var type = document.getElementById('keyType').value;
+  var customKey = document.getElementById('customKeyInput').value.trim();
+  if (!customKey) { alert('Enter a custom key value'); return; }
+  var hours = type === 'trial' ? parseInt(document.getElementById('trialHours').value, 10) || 5 : undefined;
+  fetch(authUrl('/api/admin/keys/generate'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: type, customKey: customKey, hours: hours })
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    document.getElementById('newKeyDisplay').innerHTML =
+      '<span style="color:#10a37f">Created:</span> <strong>' + d.key + '</strong>' +
+      (d.expiresAt ? ' <span style="color:#6b7280;font-size:11px">expires ' + new Date(d.expiresAt).toLocaleString() + '</span>' : '') +
+      ' <button class="btn-sm" style="background:#374151;color:#fff" onclick="copyKey(\'' + d.key + '\')">Copy</button>';
+    document.getElementById('customKeyInput').value = '';
+    fetchKeys(); fetchStats();
+  });
+}
+
+function copyKey(k) {
+  navigator.clipboard.writeText(k).then(function() {
+    document.getElementById('newKeyDisplay').innerHTML += '<span class="copied">Copied to clipboard</span>';
+  });
+}
+
+function copyText(t) {
+  navigator.clipboard.writeText(t).then(function() {
+    var el = document.createElement('span');
+    el.className = 'copied';
+    el.textContent = 'Copied!';
+    el.style.position = 'fixed';
+    el.style.top = '50%';
+    el.style.left = '50%';
+    el.style.transform = 'translate(-50%,-50%)';
+    el.style.background = '#10a37f';
+    el.style.color = '#fff';
+    el.style.padding = '8px 20px';
+    el.style.borderRadius = '8px';
+    el.style.fontSize = '13px';
+    el.style.zIndex = '2000';
+    el.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)';
+    document.body.appendChild(el);
+    setTimeout(function() { el.remove(); }, 1200);
+  });
+}
+
+function revokeKey(id, reason) {
+  fetch(authUrl('/api/admin/keys/' + id + '?reason=' + encodeURIComponent(reason)), {
+    method: 'DELETE'
+  }).then(function() {
+    closeModal();
+    fetchKeys(); fetchStats();
+  });
+}
+
+function showRevokeDialog(id) {
+  document.getElementById('modalContainer').innerHTML =
+    '<div class="modal-overlay" onclick="if(event.target===this)closeModal()">' +
+    '<div class="modal">' +
+    '<button class="modal-close" onclick="closeModal()">&times;</button>' +
+    '<h2>Revoke License Key</h2>' +
+    '<div class="modal-field"><label>Reason for Revocation</label>' +
+    '<input id="revokeReason" type="text" placeholder="e.g. User requested refund, abuse detected..." style="width:100%"></div>' +
+    '<div class="modal-actions">' +
+    '<button class="btn-ghost" onclick="closeModal()">Cancel</button>' +
+    '<button class="btn-danger" onclick="revokeKey(\'' + id + '\',document.getElementById(\'revokeReason\').value)">Permanently Revoke</button>' +
+    '</div></div></div>';
+  setTimeout(function() { document.getElementById('revokeReason').focus(); }, 100);
+}
+
+function showNotes(id, current) {
+  document.getElementById('modalContainer').innerHTML =
+    '<div class="modal-overlay" onclick="if(event.target===this)closeModal()">' +
+    '<div class="modal">' +
+    '<button class="modal-close" onclick="closeModal()">&times;</button>' +
+    '<h2>Key Notes</h2>' +
+    '<div class="modal-field"><label>Notes (e.g. buyer info, contact details)</label>' +
+    '<textarea id="notesField" rows="4" style="width:100%">' + current + '</textarea></div>' +
+    '<div class="modal-actions">' +
+    '<button class="btn-ghost" onclick="closeModal()">Cancel</button>' +
+    '<button class="btn-primary" onclick="saveNotes(\'' + id + '\')">Save</button>' +
+    '</div></div></div>';
+}
+
+function saveNotes(id) {
+  var notes = document.getElementById('notesField').value;
+  fetch(authUrl('/api/admin/keys/' + id + '/notes'), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ notes: notes })
+  }).then(function() {
+    closeModal();
+    fetchKeys();
+  });
+}
+
+function showRestrictions(id, whitelist, blacklist) {
+  document.getElementById('modalContainer').innerHTML =
+    '<div class="modal-overlay" onclick="if(event.target===this)closeModal()">' +
+    '<div class="modal">' +
+    '<button class="modal-close" onclick="closeModal()">&times;</button>' +
+    '<h2>IP Restrictions</h2>' +
+    '<div class="modal-field"><label>IP Whitelist (comma-separated, leave empty for no restriction)</label>' +
+    '<input id="wlInput" type="text" placeholder="192.168.1., 10.0.0." value="' + (whitelist || []).join(', ') + '" style="width:100%"></div>' +
+    '<div class="modal-field"><label>IP Blacklist (comma-separated)</label>' +
+    '<input id="blInput" type="text" placeholder="1.2.3.4, 5.6.7." value="' + (blacklist || []).join(', ') + '" style="width:100%"></div>' +
+    '<p style="font-size:11px;color:#6b7280">Partial matches allowed. e.g. "192.168." blocks all 192.168.x.x</p>' +
+    '<div class="modal-actions">' +
+    '<button class="btn-ghost" onclick="closeModal()">Cancel</button>' +
+    '<button class="btn-primary" onclick="saveRestrictions(\'' + id + '\')">Save</button>' +
+    '</div></div></div>';
+}
+
+function saveRestrictions(id) {
+  var wl = document.getElementById('wlInput').value.split(',').map(function(s) { return s.trim(); }).filter(function(s) { return s; });
+  var bl = document.getElementById('blInput').value.split(',').map(function(s) { return s.trim(); }).filter(function(s) { return s; });
+  fetch(authUrl('/api/admin/keys/' + id + '/restrictions'), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ whitelist: wl, blacklist: bl })
+  }).then(function() {
+    closeModal();
+    fetchKeys();
+  });
+}
+
+function showTimeline(id) {
+  fetch(authUrl('/api/admin/keys/' + id + '/events')).then(function(r) { return r.json(); }).then(function(events) {
+    var html = '<div class="modal-overlay" onclick="if(event.target===this)closeModal()">' +
+      '<div class="modal" style="max-width:500px">' +
+      '<button class="modal-close" onclick="closeModal()">&times;</button>' +
+      '<h2>Activity Timeline</h2>' +
+      '<div class="timeline">';
+    if (events.length === 0) {
+      html += '<div style="color:#6b7280;padding:12px 0;font-style:italic">No activity recorded yet</div>';
+    } else {
+      for (var i = events.length - 1; i >= 0; i--) {
+        var e = events[i];
+        var ts = new Date(e.timestamp).toLocaleString();
+        html += '<div class="timeline-item t-' + e.type + '">' +
+          '<div class="timeline-time">' + ts + '</div>' +
+          '<div class="timeline-detail">' + (e.detail || e.type) + '</div>' +
+          (e.clientIp ? '<div class="timeline-meta">IP: ' + e.clientIp + (e.deviceId ? ' | Device: ' + e.deviceId.slice(0, 12) + '..' : '') + (e.email ? ' | ' + e.email : '') + '</div>' : '') +
+          '</div>';
+      }
+    }
+    html += '</div><div class="modal-actions"><button class="btn-ghost" onclick="closeModal()">Close</button></div></div></div>';
+    document.getElementById('modalContainer').innerHTML = html;
+  });
+}
+
+function exportCsv() {
+  window.open(authUrl('/api/admin/export/csv'), '_blank');
+}
+
+function fetchLogs() {
+  fetch('/api/logs?count=50').then(function(r) { return r.json(); }).then(function(logs) {
+    var html = '';
+    for (var i = 0; i < logs.length; i++) {
+      var l = logs[i];
+      html += '<tr>' +
+        '<td style="font-size:11px;color:#6b7280">' + l.timestamp + '</td>' +
+        '<td class="log-' + l.level.toLowerCase() + '">' + l.level + '</td>' +
+        '<td>[' + l.subsystem + ']</td><td>' + l.message + '</td></tr>';
+    }
+    document.getElementById('logs').innerHTML = html;
+  });
+}
+</script>
+</body>
+</html>

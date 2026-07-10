@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Encrypted Crew Bridge",
+  "version": "1.0.0",
+  "description": "Crew Bridge Agent - semi-autonomous AI agent bridging DeepSeek and your filesystem",
+  "icons": {
+    "128": "ecrew.png"
+  },
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "*://chat.deepseek.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://chat.deepseek.com/*"
+      ],
+      "js": [
+        "content.js"
+      ]
+    }
+  ]
+}

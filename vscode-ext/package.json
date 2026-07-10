@@ -1,0 +1,54 @@
+{
+  "name": "encrypted-crew-bridge",
+  "displayName": "Encrypted Crew Bridge",
+  "description": "VS Code extension for the Encrypted Crew Bridge MCP server",
+  "version": "1.0.0",
+  "publisher": "encrypted-crew",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "crewBridge.listProjects",
+        "title": "Crew Bridge: List Projects"
+      },
+      {
+        "command": "crewBridge.readFile",
+        "title": "Crew Bridge: Read Encrypted File"
+      },
+      {
+        "command": "crewBridge.writeFile",
+        "title": "Crew Bridge: Write Encrypted File"
+      },
+      {
+        "command": "crewBridge.deleteFile",
+        "title": "Crew Bridge: Delete Encrypted File"
+      },
+      {
+        "command": "crewBridge.encryptText",
+        "title": "Crew Bridge: Encrypt Text"
+      },
+      {
+        "command": "crewBridge.exportFile",
+        "title": "Crew Bridge: Export Decrypted File"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {}
+}
